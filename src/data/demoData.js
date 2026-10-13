@@ -58,6 +58,7 @@ export const defaultBusiness = {
 }
 
 export const defaultSettings = {
+  theme: 'light',
   businessGoal: 'sales_recovery',
   businessCategory: 'Skincare • DTC',
   communicationChannel: 'WhatsApp',

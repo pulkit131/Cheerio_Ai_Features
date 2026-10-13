@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
   ArrowRight,
@@ -13,10 +13,12 @@ import {
   Home,
   ListTodo,
   MessageSquareText,
+  Moon,
   RefreshCcw,
   Search,
   Settings,
   Sparkles,
+  Sun,
   Target,
   TrendingUp,
   Users,
@@ -79,7 +81,13 @@ function App() {
 }
 
 function AppLayout() {
-  const { state, updateBusiness } = useAppState()
+  const { state, updateBusiness, updateSettings } = useAppState()
+  const theme = state.settings.theme === 'dark' ? 'dark' : 'light'
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.style.colorScheme = theme
+  }, [theme])
 
   return (
     <div className="app-shell">
@@ -136,6 +144,16 @@ function AppLayout() {
             </div>
           </div>
           <div className="topbar-right">
+            <button
+              type="button"
+              className="ghost-button theme-toggle"
+              onClick={() => updateSettings({ theme: theme === 'dark' ? 'light' : 'dark' })}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+            </button>
             <button type="button" className="ghost-button" aria-label="Open help">
               <BellRing size={16} />
               Help

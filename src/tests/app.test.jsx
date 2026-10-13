@@ -122,6 +122,18 @@ describe('UI smoke tests', () => {
     expect(screen.getByText(/Recover more abandoned carts/i)).toBeInTheDocument()
   })
 
+  it('toggles and persists the color theme', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Switch to dark mode' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).settings.theme).toBe('dark')
+
+    await user.click(screen.getByRole('button', { name: 'Switch to light mode' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+  })
+
   it('shows the not-found state for an invalid route', () => {
     window.history.pushState({}, '', '/unknown')
     render(<App />)

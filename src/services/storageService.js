@@ -28,7 +28,11 @@ function mergeWithDefaults(rawState) {
     ...defaults,
     ...rawState,
     business: { ...defaults.business, ...(rawState.business || {}) },
-    settings: { ...defaults.settings, ...(rawState.settings || {}) },
+    settings: {
+      ...defaults.settings,
+      ...(rawState.settings || {}),
+      theme: rawState.settings?.theme === 'dark' ? 'dark' : 'light',
+    },
     recommendations: Array.isArray(rawState.recommendations) ? rawState.recommendations : [],
     activity: Array.isArray(rawState.activity) ? rawState.activity : defaults.activity,
     metrics: { ...defaults.metrics, ...(rawState.metrics || {}) },
