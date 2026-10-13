@@ -1,4 +1,9 @@
 export function evaluateReadiness({ missionId, config = {}, settings = {} }) {
+  const audienceSize = Number(settings.audienceSize)
+  const audienceAvailable = Number.isInteger(audienceSize) && audienceSize > 0
+  const message = config.message || ''
+  const hasRequiredPlaceholders = /\{\{first_name\}\}/.test(message) && /\{\{cart_link\}\}/.test(message)
+
   const checks = [
     {
       id: 'trigger',
@@ -10,8 +15,8 @@ export function evaluateReadiness({ missionId, config = {}, settings = {} }) {
     {
       id: 'audience',
       label: 'Audience available',
-      status: Number(settings.audienceSize || 0) > 0 ? 'pass' : 'blocked',
-      explanation: Number(settings.audienceSize || 0) > 0 ? 'There are eligible customers in the demo audience.' : 'The audience is empty, so the workflow cannot be ready.',
+      status: audienceAvailable ? 'pass' : 'blocked',
+      explanation: audienceAvailable ? 'There are eligible customers in the demo audience.' : 'The audience is empty or invalid, so the workflow cannot be ready.',
       fix: 'Increase the demo audience size or select a valid segment.',
     },
     {
@@ -24,20 +29,14 @@ export function evaluateReadiness({ missionId, config = {}, settings = {} }) {
     {
       id: 'message',
       label: 'Message content valid',
-      status: (() => {
-        const text = config.message || ''
-        const hasName = /\{\{first_name\}\}/.test(text)
-        const hasLink = /\{\{cart_link\}\}/.test(text)
-        if (!text.trim()) return 'blocked'
-        if (!hasName || !hasLink) return 'blocked'
-        return 'pass'
-      })(),
-      explanation: (() => {
-        const text = config.message || ''
-        if (!text.trim()) return 'The message is empty. Add a follow-up message.'
-        if (!/\{\{first_name\}\}/.test(text) || !/\{\{cart_link\}\}/.test(text)) return 'Required placeholders are missing.'
-        return 'Message content includes the required placeholders.'
-      })(),
+      status: message.trim() && message.length <= 1024 && hasRequiredPlaceholders ? 'pass' : 'blocked',
+      explanation: !message.trim()
+        ? 'The message is empty. Add a follow-up message.'
+        : message.length > 1024
+          ? 'The message is longer than the 1,024 character demo limit.'
+          : !hasRequiredPlaceholders
+            ? 'Required placeholders are missing.'
+            : 'Message content includes the required placeholders.',
       fix: 'Include {{first_name}} and {{cart_link}} in the message.',
     },
     {
@@ -51,7 +50,7 @@ export function evaluateReadiness({ missionId, config = {}, settings = {} }) {
       id: 'integration',
       label: 'Integration connected',
       status: settings.integrations?.whatsapp?.connected ? 'pass' : 'blocked',
-      explanation: settings.integrations?.whatsapp?.connected ? 'The WhatsApp business connection is live in the demo.' : 'The required WhatsApp integration is disconnected.',
+      explanation: settings.integrations?.whatsapp?.connected ? 'The demo account marks its WhatsApp connection as connected; no real service is contacted.' : 'The demo WhatsApp connection is marked as disconnected.',
       fix: 'Reconnect WhatsApp in Settings.',
     },
     {

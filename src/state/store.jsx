@@ -22,6 +22,12 @@ export function AppStateProvider({ children }) {
     setState((current) => ({
       ...current,
       business: { ...current.business, ...patch },
+      settings: {
+        ...current.settings,
+        businessGoal: patch.goal ?? current.settings.businessGoal,
+        businessCategory: patch.category ?? current.settings.businessCategory,
+        communicationChannel: patch.channel ?? current.settings.communicationChannel,
+      },
     }))
   }
 
@@ -31,6 +37,20 @@ export function AppStateProvider({ children }) {
       settings: {
         ...current.settings,
         ...patch,
+        recommendationPreferences: {
+          ...current.settings.recommendationPreferences,
+          ...(patch.recommendationPreferences || {}),
+        },
+        integrations: {
+          ...current.settings.integrations,
+          ...(patch.integrations || {}),
+        },
+      },
+      business: {
+        ...current.business,
+        goal: patch.businessGoal ?? current.business.goal,
+        category: patch.businessCategory ?? current.business.category,
+        channel: patch.communicationChannel ?? current.business.channel,
       },
     }))
   }
@@ -64,8 +84,12 @@ export function AppStateProvider({ children }) {
 
   const addEvent = (event) => {
     setState((current) => {
+      if (event.dedupeKey && current.activity.some((item) => item.dedupeKey === event.dedupeKey)) {
+        return current
+      }
       const nextEvent = {
         id: event.id || `event-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        dedupeKey: event.dedupeKey || null,
         eventName: event.eventName,
         missionId: event.missionId || null,
         timestamp: event.timestamp || new Date().toISOString(),
@@ -82,12 +106,90 @@ export function AppStateProvider({ children }) {
     })
   }
 
+  const startMission = (missionId) => {
+    setState((current) => {
+      const mission = current.missions[missionId]
+      if (!mission || mission.status === 'completed' || mission.completedAt || mission.activatedAt) return current
+      if (mission.startedAt) return current
+      const now = new Date().toISOString()
+      return {
+        ...current,
+        missions: {
+          ...current.missions,
+          [missionId]: {
+            ...mission,
+            status: 'in_progress',
+            progress: Math.max(mission.progress || 0, 5),
+            startedAt: now,
+          },
+        },
+        activity: [{
+          id: `mission-started-${missionId}`,
+          dedupeKey: `mission-started-${missionId}`,
+          eventName: 'Mission started',
+          missionId,
+          timestamp: now,
+          eventSource: 'current-demo',
+          properties: {},
+          category: 'Journey',
+          isHistorical: false,
+        }, ...current.activity],
+      }
+    })
+  }
+
+  const completeMission = (missionId, properties = {}) => {
+    setState((current) => {
+      const mission = current.missions[missionId]
+      if (!mission || mission.status === 'completed' || mission.completedAt || mission.activatedAt) return current
+      const now = new Date().toISOString()
+      const startEvent = mission.startedAt ? [] : [{
+        id: `mission-started-${missionId}`,
+        dedupeKey: `mission-started-${missionId}`,
+        eventName: 'Mission started',
+        missionId,
+        timestamp: now,
+        eventSource: 'current-demo',
+        properties: {},
+        category: 'Journey',
+        isHistorical: false,
+      }]
+      return {
+        ...current,
+        missions: {
+          ...current.missions,
+          [missionId]: {
+            ...mission,
+            status: 'completed',
+            progress: 100,
+            startedAt: mission.startedAt || now,
+            setupCompletedAt: now,
+            completedAt: now,
+          },
+        },
+        activity: [{
+          id: `mission-completed-${missionId}`,
+          dedupeKey: `mission-completed-${missionId}`,
+          eventName: 'Mission completed',
+          missionId,
+          timestamp: now,
+          eventSource: 'current-demo',
+          properties,
+          category: 'Completion',
+          isHistorical: false,
+        }, ...startEvent, ...current.activity],
+      }
+    })
+  }
+
   const resetDemo = () => {
     setState(() => buildDefaultState())
   }
 
   const activateMission = (missionId) => {
     setState((current) => {
+      const mission = current.missions[missionId]
+      if (!mission || mission.activatedAt || mission.status === 'completed') return current
       const config = current.missionConfig[missionId] || {}
       const readiness = evaluateReadiness({
         missionId,
@@ -96,10 +198,6 @@ export function AppStateProvider({ children }) {
       })
 
       if (!readiness.pass) {
-        return current
-      }
-
-      if (current.missions[missionId]?.activatedAt) {
         return current
       }
 
@@ -112,8 +210,9 @@ export function AppStateProvider({ children }) {
             ...current.missions[missionId],
             status: 'completed',
             progress: 100,
-            activatedAt: now,
+            setupCompletedAt: now,
             completedAt: now,
+            activatedAt: now,
             startedAt: current.missions[missionId]?.startedAt || now,
           },
         },
@@ -124,7 +223,8 @@ export function AppStateProvider({ children }) {
       }
 
       const activationEvent = {
-        id: `activation-${missionId}-${now}`,
+        id: `activation-${missionId}`,
+        dedupeKey: `activation-${missionId}`,
         eventName: 'Demo activation confirmed',
         missionId,
         timestamp: now,
@@ -133,7 +233,29 @@ export function AppStateProvider({ children }) {
         properties: { workflowType: 'demo', status: 'activated' },
       }
 
-      nextState.activity = [activationEvent, ...nextState.activity]
+      const completionEvent = {
+        id: `mission-completed-${missionId}`,
+        dedupeKey: `mission-completed-${missionId}`,
+        eventName: 'Mission completed',
+        missionId,
+        timestamp: now,
+        eventSource: 'current-demo',
+        category: 'Completion',
+        properties: { workflowType: 'demo' },
+        isHistorical: false,
+      }
+      const startEvent = current.missions[missionId].startedAt ? [] : [{
+        id: `mission-started-${missionId}`,
+        dedupeKey: `mission-started-${missionId}`,
+        eventName: 'Mission started',
+        missionId,
+        timestamp: now,
+        eventSource: 'current-demo',
+        properties: {},
+        category: 'Journey',
+        isHistorical: false,
+      }]
+      nextState.activity = [activationEvent, completionEvent, ...startEvent, ...nextState.activity]
       return nextState
     })
   }
@@ -147,6 +269,8 @@ export function AppStateProvider({ children }) {
     updateMissionConfig,
     updateMissionState,
     addEvent,
+    startMission,
+    completeMission,
     resetDemo,
     activateMission,
   }), [state])

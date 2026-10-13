@@ -1,14 +1,14 @@
 export const missionCatalog = [
   {
     id: 'abandoned-cart',
-    title: 'Recover abandoned carts',
+    title: 'Recover more abandoned carts',
     category: 'Sales recovery',
     description: 'Turn existing WhatsApp campaigns into a respectful, guided recovery journey for shoppers who leave without checking out.',
     outcome: 'Recover more lost sales and turn at-risk shoppers into repeat buyers.',
     prerequisites: ['WhatsApp connected', 'Customer list with cart activity', 'Message template approved'],
     effort: '5 minutes',
     status: 'Recommended',
-    recommendedReason: 'Your current goal is sales recovery and GlowCart already sends WhatsApp campaigns.',
+    recommendedReason: 'GlowCart runs WhatsApp campaigns, and a cart recovery sequence is not yet configured in this demo.',
     setupSteps: ['Choose the trigger', 'Select the audience', 'Set timing', 'Create the message', 'Review and validate', 'Activate demo workflow'],
   },
   {
@@ -20,7 +20,7 @@ export const missionCatalog = [
     prerequisites: ['Customer segment with last purchase date', 'Preferred reminder timing', 'A simple offer or update'],
     effort: '8 minutes',
     status: 'Not started',
-    recommendedReason: 'A lighter, retention-focused opportunity can work after recovery is in place.',
+    recommendedReason: 'Inactive-customer follow-up is a retention opportunity that can complement existing campaign activity.',
     setupSteps: ['Pick the inactivity window', 'Create a segment', 'Choose the message', 'Review the sequence'],
   },
   {
@@ -32,7 +32,7 @@ export const missionCatalog = [
     prerequisites: ['Purchase data available', 'Customer tags or purchase history', 'Consent for campaign targeting'],
     effort: '10 minutes',
     status: 'Needs attention',
-    recommendedReason: 'The business goal is repeat purchase, and segmentation is a high-leverage next move.',
+    recommendedReason: 'Purchase-based segments make post-purchase follow-up more relevant without messaging every customer.',
     setupSteps: ['Review purchases', 'Define the segment rule', 'Save the audience', 'Test the message'],
   },
   {
@@ -44,7 +44,7 @@ export const missionCatalog = [
     prerequisites: ['Recent campaign history', 'Message analytics enabled', 'Basic conversion tracking'],
     effort: '7 minutes',
     status: 'Not started',
-    recommendedReason: 'The team has been sending campaigns manually, but performance data has not been translated into a follow-up optimization workflow yet.',
+    recommendedReason: 'Comparing campaign outcomes provides a concrete starting point for testing improvements.',
     setupSteps: ['Select a recent campaign', 'Review performance', 'Compare conversion', 'Document the next change'],
   },
 ]
@@ -88,10 +88,49 @@ export const defaultMissionConfig = {
   lastSavedAt: null,
 }
 
+export const defaultCampaignConfig = {
+  campaignId: 'spring-glow',
+  observation: '',
+  nextAction: '',
+  currentStep: 0,
+  lastSavedAt: null,
+}
+
+export const simulatedCampaigns = [
+  {
+    id: 'spring-glow',
+    name: 'Spring Glow routine launch',
+    sent: 5200,
+    delivered: 4940,
+    clicks: 741,
+    conversions: 89,
+    spend: 210,
+  },
+  {
+    id: 'hydration-week',
+    name: 'Hydration Week offer',
+    sent: 3800,
+    delivered: 3686,
+    clicks: 774,
+    conversions: 124,
+    spend: 165,
+  },
+  {
+    id: 'routine-reminder',
+    name: '30-day routine reminder',
+    sent: 2900,
+    delivered: 2813,
+    clicks: 422,
+    conversions: 101,
+    spend: 118,
+  },
+]
+
 export const defaultMissionState = {
   status: 'not_started',
   progress: 0,
   startedAt: null,
+  setupCompletedAt: null,
   activatedAt: null,
   completedAt: null,
   openedAt: null,
@@ -138,10 +177,10 @@ export const historicalInsights = [
 ]
 
 export const funnelStages = [
-  { name: 'Impression', value: 224 },
-  { name: 'Started', value: 168 },
-  { name: 'Setup', value: 111 },
-  { name: 'Ready', value: 72 },
-  { name: 'Activated', value: 48 },
-  { name: 'Repeat usage', value: 29 },
+  { id: 'impression', name: 'Recommendation viewed', value: 224 },
+  { id: 'started', name: 'Mission started', value: 168 },
+  { id: 'setup', name: 'Setup completed', value: 111 },
+  { id: 'ready', name: 'Readiness passed', value: 72 },
+  { id: 'activated', name: 'Demo workflow activated', value: 48 },
+  { id: 'repeat', name: 'Repeat usage recorded', value: 29 },
 ]

@@ -1,72 +1,118 @@
+import { missionCatalog } from '../../data/demoData.js'
+
+const goalMissionOrder = {
+  sales_recovery: ['abandoned-cart', 'campaign-performance', 'repeat-purchase', 'inactive-customers'],
+  repeat_purchases: ['repeat-purchase', 'inactive-customers', 'abandoned-cart', 'campaign-performance'],
+  campaign_performance: ['campaign-performance', 'abandoned-cart', 'repeat-purchase', 'inactive-customers'],
+}
+
+const missionPreference = {
+  'abandoned-cart': 'salesRecovery',
+  'campaign-performance': 'analytics',
+  'repeat-purchase': 'segmentation',
+  'inactive-customers': 'retention',
+}
+
+const rationaleByMission = {
+  'abandoned-cart': 'GlowCart runs WhatsApp campaigns, and a cart recovery sequence is not yet configured in this demo.',
+  'campaign-performance': 'Comparing simulated campaign results gives GlowCart a data-backed next optimization.',
+  'repeat-purchase': 'Purchase-based customer segments can make follow-up more relevant.',
+  'inactive-customers': 'A timed message can re-engage customers who have gone quiet.',
+}
+
+const goalLabel = {
+  sales_recovery: 'recovering lost sales',
+  repeat_purchases: 'growing repeat purchases',
+  campaign_performance: 'improving campaign performance',
+}
+
 export function getRecommendedMission(state) {
-  const { business, missions, settings } = state
-  const completed = Object.values(missions).filter((mission) => mission.status === 'completed').length
+  if (!state?.business || !state?.missions) return null
 
-  if (business.goal === 'sales_recovery' && !missions['abandoned-cart']?.activatedAt) {
-    return {
-      id: 'abandoned-cart',
-      title: 'Recover more abandoned carts',
-      rationale: 'Demo account conditions: GlowCart already sends WhatsApp campaigns, there is no cart-recovery automation configured, and your business goal is sales recovery.',
-      reasonCodes: ['goal_match', 'channel_fit', 'workflow_gap'],
-      capabilities: ['WhatsApp campaigns', 'Audience targeting', 'Message timing'],
-      prerequisites: ['WhatsApp connected', 'Cart activity available'],
-      effort: '5 minutes',
-      priority: 97,
-      nextAction: 'Start mission',
-    }
-  }
+  const goalOrder = goalMissionOrder[state.business.goal] || goalMissionOrder.sales_recovery
+  const orderedIds = [...new Set([...goalOrder, ...missionCatalog.map((mission) => mission.id)])]
+  const missionId = orderedIds.find((id) => (
+    state.missions[id]
+    && state.missions[id].status !== 'completed'
+    && !state.missions[id].completedAt
+    && !state.missions[id].setupCompletedAt
+    && !state.missions[id].activatedAt
+    && state.settings?.recommendationPreferences?.[missionPreference[id]] !== false
+  ))
 
-  if (business.goal === 'repeat_purchases' && !missions['repeat-purchase']?.completedAt) {
-    return {
-      id: 'repeat-purchase',
-      title: 'Create a repeat-purchase segment',
-      rationale: 'Your current goal points to improving repeat purchases and this mission turns purchase behavior into a more relevant audience.',
-      reasonCodes: ['repeat_purchase_goal', 'segment_gap'],
-      capabilities: ['Customer segmentation', 'CRM logic', 'Follow-up flows'],
-      prerequisites: ['Purchase data available', 'Audience saved'],
-      effort: '10 minutes',
-      priority: 92,
-      nextAction: 'Explore segment setup',
-    }
-  }
+  if (!missionId) return null
 
-  if (settings.recommendationPreferences?.analytics && !missions['campaign-performance']?.activatedAt) {
-    return {
-      id: 'campaign-performance',
-      title: 'Understand campaign performance',
-      rationale: 'GlowCart has been sending campaigns manually, but performance data has not been translated into a follow-up optimization workflow yet.',
-      reasonCodes: ['manual_campaigns', 'analytics_gap'],
-      capabilities: ['Campaign analytics', 'Performance review', 'Optimization planning'],
-      prerequisites: ['Recent campaign history', 'Message analytics enabled'],
-      effort: '7 minutes',
-      priority: 80,
-      nextAction: 'Review campaign trends',
-    }
-  }
-
-  if (completed > 0 && !missions['repeat-purchase']?.activatedAt) {
-    return {
-      id: 'repeat-purchase',
-      title: 'Create a repeat-purchase segment',
-      rationale: 'A completed recovery flow is the right moment to turn customer behavior into a retention loop.',
-      reasonCodes: ['post_activation_next_step'],
-      capabilities: ['Customer segmentation', 'Repeat-purchase logic'],
-      prerequisites: ['Purchase history', 'Retention goals'],
-      effort: '10 minutes',
-      priority: 75,
-      nextAction: 'Set up the next step',
-    }
-  }
+  const mission = state.missions[missionId]
+  const definition = missionCatalog.find((item) => item.id === missionId)
+  const goalMatches = goalOrder[0] === missionId
+  const isInProgress = mission.status === 'in_progress'
+  const readiness = getRecommendationReadiness(missionId, state.settings)
+  const readinessNote = readiness.missingPrerequisites.length
+    ? ` Demo prerequisite needs attention: ${readiness.missingPrerequisites.join(', ')}.`
+    : ''
+  const rationale = isInProgress
+    ? `Continue the mission already in progress. ${rationaleByMission[missionId]}`
+    : goalMatches
+      ? `This mission aligns with your goal of ${goalLabel[state.business.goal] || 'business growth'}. ${rationaleByMission[missionId]}`
+      : `This is the next available mission for your current workspace. ${rationaleByMission[missionId]}`
 
   return {
-    id: 'abandoned-cart',
-    title: 'Recover more abandoned carts',
-    rationale: 'This remains the highest-fit mission for your current focus on sales recovery and WhatsApp-led customer follow-up.',
-    reasonCodes: ['default_recommendation'],
-    capabilities: ['WhatsApp campaigns', 'Cart follow-up'],
-    prerequisites: ['WhatsApp connected'],
-    effort: '5 minutes',
-    priority: 70,
-    nextAction: 'Start mission',
+    id: missionId,
+    title: definition?.title || getTitle(missionId),
+    rationale: `${rationale}${readinessNote}`,
+    reasonCodes: [goalMatches ? 'goal_match' : 'next_available_opportunity', ...(isInProgress ? ['in_progress'] : [])],
+    capabilities: getCapabilities(missionId),
+    prerequisites: definition?.prerequisites || [],
+    effort: definition?.effort || '5 minutes',
+    priority: goalMatches ? 97 : 78,
+    nextAction: isInProgress ? 'Continue mission' : 'Start mission',
+    readiness: readiness.status,
+    missingPrerequisites: readiness.missingPrerequisites,
+  }
+}
+
+function getTitle(missionId) {
+  const titles = {
+    'abandoned-cart': 'Recover more abandoned carts',
+    'campaign-performance': 'Understand campaign performance',
+    'repeat-purchase': 'Create a repeat-purchase segment',
+    'inactive-customers': 'Re-engage inactive customers',
+  }
+  return titles[missionId] || missionId
+}
+
+function getCapabilities(missionId) {
+  const capabilities = {
+    'abandoned-cart': ['WhatsApp campaigns', 'Audience targeting', 'Message timing'],
+    'campaign-performance': ['Campaign analytics', 'Performance review', 'Optimization planning'],
+    'repeat-purchase': ['Customer segmentation', 'CRM logic', 'Follow-up flows'],
+    'inactive-customers': ['Customer segmentation', 'WhatsApp follow-up'],
+  }
+  return capabilities[missionId] || []
+}
+
+export function getRecommendationReadiness(missionId, settings = {}) {
+  const checks = {
+    'abandoned-cart': [
+      ['WhatsApp connection', Boolean(settings.integrations?.whatsapp?.connected)],
+      ['eligible audience', Number.isInteger(settings.audienceSize) && settings.audienceSize > 0],
+      ['template approval', settings.templateApproval === 'approved'],
+    ],
+    'campaign-performance': [
+      ['campaign analytics connection', Boolean(settings.integrations?.analytics?.connected)],
+    ],
+    'repeat-purchase': [
+      ['CRM connection', Boolean(settings.integrations?.crm?.connected)],
+      ['eligible audience', Number.isInteger(settings.audienceSize) && settings.audienceSize > 0],
+    ],
+    'inactive-customers': [
+      ['CRM connection', Boolean(settings.integrations?.crm?.connected)],
+      ['eligible audience', Number.isInteger(settings.audienceSize) && settings.audienceSize > 0],
+    ],
+  }[missionId] || []
+  const missingPrerequisites = checks.filter(([, ready]) => !ready).map(([label]) => label)
+  return {
+    status: missingPrerequisites.length ? 'needs_attention' : 'ready',
+    missingPrerequisites,
   }
 }

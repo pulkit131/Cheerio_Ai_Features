@@ -5,10 +5,13 @@ A responsive, demo-first React prototype for a guided growth workspace that reco
 ## Features
 
 - Outcome-driven mission discovery
-- Guided abandoned-cart setup journey
+- Goal-aware recommendations shared across app routes
+- Guided abandoned-cart recovery setup with deterministic readiness checks
+- Campaign-performance journey with selectable fictional campaigns, conversion comparisons, observations, and next actions
 - Deterministic readiness checks and validation states
 - Local persistence via browser storage
-- Activity history and simulated analytics dashboard
+- Activity history with readable event context and deduplicated demo events
+- Funnel metrics that separate seeded simulated history from current-browser events
 - Settings and reset flow for demo state
 - Responsive shell for desktop and mobile layouts
 
@@ -58,6 +61,9 @@ This project is structured for static deployment on Vercel or a similar host. To
 - Abandoned-cart setup can be completed through the seven-step flow.
 - Readiness checks block when the integration is disconnected, the audience is empty, or the template is pending approval.
 - A valid configuration passes readiness and can be activated.
+- Campaign performance compares simulated conversion rates and records a next action.
+- Recommendations, mission completion, progress, and activity stay aligned after state changes.
+- Funnel conversion and drop-off handle zero denominators without `NaN` or `Infinity`.
 - Progress and configuration persist after refresh.
 - Reset restores the original state.
 - App routes load correctly on direct navigation.
@@ -67,12 +73,16 @@ This project is structured for static deployment on Vercel or a similar host. To
 - Task requested: build a product prototype for Cheerio Growth Missions with a guided abandoned-cart recovery journey and demo state persistence.
 - Prompt used: the project prompt in the attached assignment brief.
 - Output accepted: a Vite + React prototype with route-based workspace, recommendation engine, setup flow, validation checks, and analytics.
+- Follow-up prompt: review the existing app and improve recommendation consistency, campaign-performance workflow, funnel math, progress definitions, activity context, settings validation, persistence, and tests without rebuilding it.
+- Follow-up changes: one goal-aware recommendation selector now drives route banners and cards; campaign review uses fictional data and can be completed with a documented next action; current-demo funnel counts are kept separate from seeded sample history.
 - Important correction: the initial toolchain was updated to Node-20-compatible versions because the default Vite/Vitest stack required a newer runtime than the environment provided.
-- Evidence of actual testing: `npm test` and `npm run build` were run successfully after implementation.
+- Evidence of actual testing: the follow-up test suite and production build were run after these changes; the results are reported in the task completion response.
 
 ## Limitations
 
 - All analytics and activity are simulated demo data.
+- Campaign records are fictional examples; conversion rate is calculated as conversions divided by delivered messages.
+- Historical funnel totals are seeded aggregate counts. Current-demo funnel counts come from this browser's generated events.
+- Campaign review completion records a learning exercise; it is not activation or production feature adoption.
 - No external LLM or real messaging services are used.
 - This is a frontend prototype and should not be treated as production customer data or production feature telemetry.
-
